@@ -4,30 +4,30 @@ subtitle: "Guided Analysis Workbook"
 author: "Cal Poly San Luis Obispo"
 date: today
 format:
-  html:
-    toc: true
-    toc-depth: 3
-    toc-location: left
-    number-sections: true
-    theme: cosmo
-    fig-width: 7
-    fig-height: 4.2
-    code-fold: true
-    embed-resources: true
   docx:
     toc: true
     toc-depth: 3
     number-sections: true
     fig-width: 6
     fig-height: 3.8
+html:
+  toc: true
+  toc-depth: 3
+  toc-location: left
+  number-sections: true
+  theme: cosmo
+  fig-width: 7
+  fig-height: 4.2
+  code-fold: true
+  embed-resources: true
 execute:
   echo: false
   warning: false
   message: false
 params:
-  sheet_id: "1tONhwxUnaoHO8SlTVTO3u4kcxbteZXqIOcxteUuKeck"
-  sheet_url: "https://docs.google.com/spreadsheets/d/1tONhwxUnaoHO8SlTVTO3u4kcxbteZXqIOcxteUuKeck/edit"
-  session: "sec-08"
+  sheet_id: "1IzT5bmVMggu83kL6dNwThwvOXybVkt0joSRxu4YJJAY"
+  sheet_url: "https://docs.google.com/spreadsheets/d/1IzT5bmVMggu83kL6dNwThwvOXybVkt0joSRxu4YJJAY/edit"
+  session: "section-8"
   show_roulette: true
   show_birthmonth: true
   show_coffee: true
@@ -203,7 +203,7 @@ The variable is **roulette pocket**, with 6 possible values: 1, 2, 3, 4, 5, 6 (a
 
 &nbsp;
 
----
+
 :::
 
 **Q2.** What is the hypothesized (expected) distribution under the null?
@@ -222,7 +222,7 @@ Under the null, the wheel is fair, so each pocket has probability 1/6. The expec
 
 &nbsp;
 
----
+
 :::
 
 **Q3.** Compare the observed and expected bars in the chart. Which face(s) depart most from expectation? What might explain this?
@@ -243,7 +243,7 @@ Look for the face where the observed bar is tallest relative to its expected bar
 
 &nbsp;
 
----
+
 :::
 
 **Q4.** How does the chi-square statistic work? What would a value of 0 mean? What does a large value mean?
@@ -264,7 +264,7 @@ The chi-square statistic sums $\frac{(\text{observed} - \text{expected})^2}{\tex
 
 &nbsp;
 
----
+
 :::
 
 **Q5.** Based on the visualization and summary statistics alone, what is your initial conclusion?
@@ -285,7 +285,7 @@ If the observed and expected bars look roughly equal for all pockets, the data a
 
 &nbsp;
 
----
+
 :::
 
 ## Independent Conceptual Questions — Experiment 4
@@ -304,7 +304,7 @@ Does the distribution of pooled roulette spin outcomes differ from a uniform dis
 
 &nbsp;
 
----
+
 :::
 
 **C2.** What is the population? What is the sample?
@@ -321,7 +321,7 @@ Does the distribution of pooled roulette spin outcomes differ from a uniform dis
 
 &nbsp;
 
----
+
 :::
 
 **C3.** What is the observational unit?
@@ -338,7 +338,7 @@ A single roulette spin. Each spin produces one pocket value (1–6).
 
 &nbsp;
 
----
+
 :::
 
 **C4.** How many variables are in this analysis? Name them.
@@ -355,7 +355,7 @@ A single roulette spin. Each spin produces one pocket value (1–6).
 
 &nbsp;
 
----
+
 :::
 
 **C5.** State the null and alternative hypotheses.
@@ -376,7 +376,7 @@ $H_a$: At least one $p_i \neq 1/6$ (not a fair wheel).
 
 &nbsp;
 
----
+
 :::
 
 **C6.** How are degrees of freedom calculated for this test?
@@ -393,7 +393,7 @@ $df = k - 1$ where $k$ is the number of categories. Here $k = 6$, so $df = 5$.
 
 &nbsp;
 
----
+
 :::
 
 **C7.** What potential confounding factors or design limitations exist?
@@ -412,7 +412,7 @@ The pooled analysis mixes fair and rigged wheels together, which guarantees a de
 
 &nbsp;
 
----
+
 :::
 
 **C8.** Based on the test statistic and p-value, what do you conclude?
@@ -431,7 +431,7 @@ If p < 0.05, reject $H_0$ — the pooled distribution is significantly different
 
 &nbsp;
 
----
+
 :::
 
 \newpage
@@ -533,7 +533,7 @@ The variable is **birth month** with 12 categories (Jan through Dec).
 
 &nbsp;
 
----
+
 :::
 
 **Q2.** What is the expected distribution under the null hypothesis?
@@ -552,7 +552,7 @@ Under $H_0$, births are uniformly distributed across the 12 months, so each mont
 
 &nbsp;
 
----
+
 :::
 
 **Q3.** Look at the bar chart. Which months, if any, stand out as having more or fewer students than expected?
@@ -573,7 +573,7 @@ Compare each bar to the dashed gold line (the expected count). Bars well above t
 
 &nbsp;
 
----
+
 :::
 
 **Q4.** Why might the uniform distribution actually be a poor model for real birth months?
@@ -594,7 +594,7 @@ In reality, US births show a seasonal pattern: more births in late summer and ea
 
 &nbsp;
 
----
+
 :::
 
 **Q5.** Based on SSVA alone, does the distribution look uniform?
@@ -615,7 +615,7 @@ If most bars are close to the dashed line with only small deviations, the data l
 
 &nbsp;
 
----
+
 :::
 
 ## Independent Conceptual Questions — Experiment 5
@@ -634,7 +634,7 @@ Is the distribution of birth months in our class consistent with a uniform distr
 
 &nbsp;
 
----
+
 :::
 
 **C2.** What is the population? What is the sample?
@@ -651,7 +651,7 @@ Is the distribution of birth months in our class consistent with a uniform distr
 
 &nbsp;
 
----
+
 :::
 
 **C3.** What is the observational unit?
@@ -666,7 +666,7 @@ An individual student.
 
 &nbsp;
 
----
+
 :::
 
 **C4.** State the null and alternative hypotheses.
@@ -687,7 +687,7 @@ $H_a$: At least one month's probability differs from 1/12.
 
 &nbsp;
 
----
+
 :::
 
 **C5.** What are the degrees of freedom, and how are they calculated?
@@ -704,7 +704,7 @@ $df = k - 1 = 12 - 1 = 11$.
 
 &nbsp;
 
----
+
 :::
 
 **C6.** What is a potential concern with expected cell counts here? Does it apply?
@@ -723,7 +723,7 @@ The chi-square approximation works best when all expected counts are ≥ 5. With
 
 &nbsp;
 
----
+
 :::
 
 **C7.** Is this an experiment or an observational study?
@@ -740,7 +740,7 @@ The chi-square approximation works best when all expected counts are ≥ 5. With
 
 &nbsp;
 
----
+
 :::
 
 **C8.** Based on the test statistic and p-value, what do you conclude?
@@ -759,7 +759,7 @@ If p < 0.05, reject $H_0$ — the distribution of birth months in our class is s
 
 &nbsp;
 
----
+
 :::
 
 \newpage
@@ -850,7 +850,7 @@ print(kable(res6, caption = "Chi-square test of independence"))
 
 &nbsp;
 
----
+
 :::
 
 **Q2.** If origin and drink were independent, what would the bar chart look like?
@@ -869,7 +869,7 @@ The proportional breakdown of drinks would be identical for Coast and Inland stu
 
 &nbsp;
 
----
+
 :::
 
 **Q3.** Which cells depart most from expected counts? What does that tell you?
@@ -890,7 +890,7 @@ Cells where observed ≫ expected are over-represented combinations; observed �
 
 &nbsp;
 
----
+
 :::
 
 ## Independent Conceptual Questions — Experiment 6
@@ -909,7 +909,7 @@ $H_0$: Origin and drink preference are **independent**. $H_a$: They are **not in
 
 &nbsp;
 
----
+
 :::
 
 **C2.** Degrees of freedom?
@@ -924,7 +924,7 @@ $df = (r-1)(c-1) = (2-1)(4-1) = 3$.
 
 &nbsp;
 
----
+
 :::
 
 **C3.** Experiment or observational study? Can we conclude causation?
@@ -943,7 +943,7 @@ $df = (r-1)(c-1) = (2-1)(4-1) = 3$.
 
 &nbsp;
 
----
+
 :::
 
 **C4.** Based on the test statistic and p-value, what do you conclude?
@@ -962,7 +962,7 @@ If p < 0.05, reject $H_0$ — there is a statistically significant association b
 
 &nbsp;
 
----
+
 :::
 
 \newpage
@@ -989,7 +989,7 @@ exp7_clean <- exp7 |>
 After the 30-second reaction game, each student's **score** (number of correct taps) and **accuracy** (correct ÷ total attempts) are combined into a single performance category using the following rubric:
 
 | Category | Score threshold | Accuracy threshold | Plain-English meaning |
-|----------|----------------|-------------------|----------------------|
+|-|-|-|-|
 | **High** | ≥ 16 correct | ≥ 70% | Fast *and* accurate — both conditions must be true |
 | **Medium** | ≥ 8 correct | ≥ 55% | Reasonably fast and reasonably accurate — both conditions must be true |
 | **Low** | Below Medium thresholds | — | Missed at least one of the Medium conditions |
@@ -1072,7 +1072,7 @@ Stress is **self-reported** (subjective) and performance is **objectively measur
 
 &nbsp;
 
----
+
 :::
 
 **Q2.** Dimensions of the contingency table and degrees of freedom?
@@ -1091,7 +1091,7 @@ Stress is **self-reported** (subjective) and performance is **objectively measur
 
 &nbsp;
 
----
+
 :::
 
 **Q3.** If stress and performance were independent, what would the visualization show?
@@ -1112,7 +1112,7 @@ The proportional breakdown of performance categories would be identical across t
 
 &nbsp;
 
----
+
 :::
 
 **Q4.** What story would you expect intuitively? Does the data agree?
@@ -1133,7 +1133,7 @@ The intuitive prediction is that high-stress students would underperform (more i
 
 &nbsp;
 
----
+
 :::
 
 ## Independent Conceptual Questions — Experiment 7
@@ -1152,7 +1152,7 @@ $H_0$: Self-reported stress and game performance are **independent**. $H_a$: The
 
 &nbsp;
 
----
+
 :::
 
 **C2.** Is this an experiment or an observational study? Justify carefully — there's a subtlety.
@@ -1171,7 +1171,7 @@ This is **observational** for the relationship being tested. Stress is not rando
 
 &nbsp;
 
----
+
 :::
 
 **C3.** What confounders could explain any association we find?
@@ -1190,7 +1190,7 @@ Sleep, caffeine, video game experience, hand-eye coordination, time of day, mood
 
 &nbsp;
 
----
+
 :::
 
 **C4.** Based on the test, what do you conclude?
@@ -1209,5 +1209,5 @@ If p < 0.05, reject $H_0$ — there's a statistically significant association be
 
 &nbsp;
 
----
+
 :::
