@@ -1,0 +1,1213 @@
+---
+title: "STAT 252 — Chi-Square Experiments"
+subtitle: "Guided Analysis Workbook"
+author: "Cal Poly San Luis Obispo"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    theme: cosmo
+    fig-width: 7
+    fig-height: 4.2
+    code-fold: true
+    embed-resources: true
+  docx:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    fig-width: 6
+    fig-height: 3.8
+execute:
+  echo: false
+  warning: false
+  message: false
+params:
+  sheet_id: "PASTE_YOUR_GOOGLE_SHEET_ID_HERE"
+  sheet_url: "https://docs.google.com/spreadsheets/d/PASTE_YOUR_GOOGLE_SHEET_ID_HERE/edit"
+  session: "spring2026-mwf10"
+  show_roulette: true
+  show_birthmonth: true
+  show_coffee: true
+  show_pressure: true
+---
+
+```{r setup}
+library(googlesheets4)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(scales)
+library(tidyr)
+
+gs4_auth(email = TRUE)
+
+read_tab <- function(tab) {
+  tryCatch(
+    read_sheet(params$sheet_id, sheet = tab) |>
+      filter(session == params$session),
+    error = function(e) NULL
+  )
+}
+
+fmt_p <- function(p) {
+  if (is.na(p)) return("NA")
+  if (p < 0.001) return("< 0.001")
+  formatC(p, format = "f", digits = 4)
+}
+
+section_check <- function(df, name) {
+  if (is.null(df) || nrow(df) == 0) {
+    cat(sprintf("> *No data found for the '%s' experiment in session `%s`. Skipping.*\n\n",
+                name, params$session))
+    return(FALSE)
+  }
+  TRUE
+}
+```
+
+# How to Use This Workbook {.unnumbered}
+
+This workbook covers four experiments organized around two chi-square techniques:
+
+- **Goodness of Fit** (Experiments 4 & 5): Does the observed distribution of a *single* categorical variable match a hypothesized distribution?
+- **Test of Independence** (Experiments 6 & 7): Are *two* categorical variables associated, or are they independent?
+
+For each experiment we follow the **SSVA framework**:
+
+1. **State the research question.**
+2. **Look at the raw data** in the Google Sheet.
+3. **Examine summary statistics** (observed vs. expected counts).
+4. **Interpret the visualization.**
+5. **Run the analysis** (chi-square test statistic, p-value).
+6. **Answer SSVA guiding questions.**
+7. **Answer independent conceptual questions.**
+
+```{r session-info, results='asis'}
+cat(sprintf("**Session code:** `%s`  \n", params$session))
+cat(sprintf("**Class Google Sheet:** [open in new tab](%s)  \n", params$sheet_url))
+cat(sprintf("**Report generated:** %s\n\n", format(Sys.time(), "%B %d, %Y at %I:%M %p")))
+```
+
+::: {.callout-tip}
+**Before each experiment:** open the class Google Sheet linked above and click the tab for that experiment (`roulette`, `birthmonth`, `coffee`, or `pressure`).
+:::
+
+\newpage
+
+# Experiment 4 — Goodness of Fit: Is the Roulette Wheel Rigged?
+
+## Research Question
+
+> **When pooling all students' roulette spins, does the distribution of outcomes (pockets 1–6) match what we'd expect from a fair wheel?**
+
+```{r exp4-load}
+exp4 <- if (params$show_roulette) read_tab("roulette") else NULL
+exp4_ok <- section_check(exp4, "roulette")
+```
+
+```{r exp4-clean, eval=exp4_ok}
+# Expand each student's tally into individual rolls for pooling
+exp4_long <- exp4 |>
+  mutate(across(starts_with("pocket_"), as.numeric)) |>
+  select(wheel_type, pocket_1:pocket_6) |>
+  pivot_longer(cols = pocket_1:pocket_6,
+               names_to = "pocket",
+               values_to = "count") |>
+  mutate(pocket = as.integer(gsub("pocket_", "", pocket)))
+
+# Pool all rolls across the class
+exp4_pooled <- exp4_long |>
+  group_by(pocket) |>
+  summarise(observed = sum(count), .groups = "drop") |>
+  mutate(total = sum(observed),
+         expected = total / 6,
+         pocket = factor(pocket))
+```
+
+## Step 1 — Look at the Raw Data
+
+::: {.callout-note}
+**Open the class Google Sheet and click the `roulette` tab.** Each row is one student. The `wheel_type` column shows whether they had a fair or rigged wheel (they didn't know during the experiment). The `pocket_1` through `pocket_6` columns show how many times each pocket appeared in their 30 spins. Scan a few rows — do you notice any students with suspiciously many 6s?
+:::
+
+```{r exp4-glimpse, eval=exp4_ok}
+exp4 |>
+  select(wheel_type, pocket_1, pocket_2, pocket_3, pocket_4, pocket_5, pocket_6) |>
+  head(6) |>
+  kable(caption = "First few students' roulette spin tallies",
+        col.names = c("Wheel type", "1s", "2s", "3s", "4s", "5s", "6s"))
+```
+
+## Step 2 — Summary Statistics
+
+```{r exp4-summary, eval=exp4_ok}
+kable(exp4_pooled |> select(pocket, observed, expected),
+      col.names = c("Pocket", "Observed count", "Expected count (if fair)"),
+      caption = "Observed vs. expected counts across all students' spins",
+      digits = 1)
+```
+
+## Step 3 — Visualization
+
+```{r exp4-plot, eval=exp4_ok}
+exp4_plot <- exp4_pooled |>
+  pivot_longer(cols = c(observed, expected),
+               names_to = "type", values_to = "count") |>
+  mutate(type = factor(type, levels = c("observed", "expected"),
+                       labels = c("Observed", "Expected")))
+
+ggplot(exp4_plot, aes(x = pocket, y = count, fill = type)) +
+  geom_col(position = "dodge", width = 0.65, alpha = 0.9) +
+  scale_fill_manual(values = c("Observed" = "#154734", "Expected" = "#BD8B13")) +
+  labs(x = "Pocket number", y = "Total count (pooled across class)",
+       title = "Observed vs. expected roulette spin frequencies",
+       fill = "") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top")
+```
+
+## Step 4 — Analysis
+
+```{r exp4-test, eval=exp4_ok, results='asis'}
+test4 <- chisq.test(exp4_pooled$observed, p = rep(1/6, 6))
+
+res4 <- data.frame(
+  Quantity = c("Chi-square statistic (χ²)", "Degrees of freedom",
+               "p-value", "Total spins pooled"),
+  Value = c(round(test4$statistic, 3),
+            test4$parameter,
+            fmt_p(test4$p.value),
+            sum(exp4_pooled$observed))
+)
+print(kable(res4, caption = "Chi-square goodness-of-fit test"))
+```
+
+## SSVA Guiding Questions — Experiment 4
+
+**Q1.** What single categorical variable are we studying? What are its possible values?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The variable is **roulette pocket**, with 6 possible values: 1, 2, 3, 4, 5, 6 (alternating red and black on the wheel).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q2.** What is the hypothesized (expected) distribution under the null?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Under the null, the wheel is fair, so each pocket has probability 1/6. The expected count for each pocket = (total spins) × (1/6).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q3.** Compare the observed and expected bars in the chart. Which face(s) depart most from expectation? What might explain this?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Look for the face where the observed bar is tallest relative to its expected bar. If pocket 6 has a noticeably higher observed count, that's consistent with some students having rigged wheels (biased toward 6). Other pockets may be slightly lower than expected to compensate.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q4.** How does the chi-square statistic work? What would a value of 0 mean? What does a large value mean?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The chi-square statistic sums $\frac{(\text{observed} - \text{expected})^2}{\text{expected}}$ across all categories. A value of **0** would mean every observed count perfectly matches the expected count — the data fit the hypothesized distribution exactly. A **large** value means the observed counts deviate substantially from what was expected, suggesting the hypothesized distribution is wrong.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q5.** Based on the visualization and summary statistics alone, what is your initial conclusion?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If the observed and expected bars look roughly equal for all pockets, the data are consistent with fair wheels. If pocket 6 towers above expectation while others dip below, the data suggest the pooled wheel is not fair — the rigged wheels in the mix are pulling the distribution away from uniform.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+## Independent Conceptual Questions — Experiment 4
+
+**C1.** What is the statistical question?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Does the distribution of pooled roulette spin outcomes differ from a uniform distribution where each pocket has probability 1/6?
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C2.** What is the population? What is the sample?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+**Population:** all possible spins from the collection of wheels (fair and rigged) that students in this class were assigned. **Sample:** the pooled set of 30 × n spins actually performed by students in this session.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C3.** What is the observational unit?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+A single roulette spin. Each spin produces one pocket value (1–6).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C4.** How many variables are in this analysis? Name them.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+**One** variable: roulette pocket (categorical with 6 levels). Goodness-of-fit tests examine the distribution of a single categorical variable.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C5.** State the null and alternative hypotheses.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+$H_0$: The true probability of each face is $p_1 = p_2 = p_3 = p_4 = p_5 = p_6 = 1/6$ (fair wheel).
+
+$H_a$: At least one $p_i \neq 1/6$ (not a fair wheel).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C6.** How are degrees of freedom calculated for this test?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+$df = k - 1$ where $k$ is the number of categories. Here $k = 6$, so $df = 5$.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C7.** What potential confounding factors or design limitations exist?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The pooled analysis mixes fair and rigged wheels together, which guarantees a departure from uniform *if* enough students had rigged wheels. The individual spins within each student's 30 are independent (simulated), but the "treatment" (fair vs. rigged) is assigned at the student level. A more nuanced analysis could separate students by wheel type and test each group separately.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C8.** Based on the test statistic and p-value, what do you conclude?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If p < 0.05, reject $H_0$ — the pooled distribution is significantly different from uniform, consistent with some wheels being rigged. If p ≥ 0.05, fail to reject — the data are consistent with fair wheels (or the rigged wheels didn't produce enough imbalance to detect with this sample size).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+\newpage
+
+# Experiment 5 — Goodness of Fit: Birth Month Distribution
+
+## Research Question
+
+> **Are birth months in our class uniformly distributed across the 12 months of the year?**
+
+```{r exp5-load}
+exp5 <- if (params$show_birthmonth) read_tab("birthmonth") else NULL
+exp5_ok <- section_check(exp5, "birthmonth")
+```
+
+```{r exp5-clean, eval=exp5_ok}
+month_order <- c("Jan","Feb","Mar","Apr","May","Jun",
+                 "Jul","Aug","Sep","Oct","Nov","Dec")
+
+exp5_clean <- exp5 |>
+  mutate(birth_month = factor(birth_month, levels = month_order))
+
+exp5_counts <- exp5_clean |>
+  count(birth_month, .drop = FALSE, name = "observed") |>
+  mutate(total = sum(observed),
+         expected = total / 12)
+```
+
+## Step 1 — Look at the Raw Data
+
+::: {.callout-note}
+**Open the class Google Sheet and click the `birthmonth` tab.** Each row is one student with their birth month. How many total students submitted? Can you eyeball which months are most and least common?
+:::
+
+```{r exp5-glimpse, eval=exp5_ok}
+exp5_clean |>
+  select(birth_month) |>
+  head(8) |>
+  kable(caption = "First few rows of the birth month data",
+        col.names = c("Birth Month"))
+```
+
+## Step 2 — Summary Statistics
+
+```{r exp5-summary, eval=exp5_ok}
+kable(exp5_counts |> select(birth_month, observed, expected),
+      col.names = c("Month", "Observed", "Expected (uniform)"),
+      caption = "Observed vs. expected birth month counts",
+      digits = 1)
+```
+
+## Step 3 — Visualization
+
+```{r exp5-plot, eval=exp5_ok}
+ggplot(exp5_counts, aes(x = birth_month, y = observed)) +
+  geom_col(fill = "#154734", alpha = 0.85, width = 0.65) +
+  geom_hline(aes(yintercept = expected), color = "#BD8B13",
+             linewidth = 1.2, linetype = "dashed") +
+  annotate("text", x = 11.5, y = exp5_counts$expected[1] + 0.5,
+           label = "Expected (uniform)", color = "#BD8B13",
+           fontface = "bold", size = 3.5, hjust = 1) +
+  labs(x = "", y = "Number of students",
+       title = "Birth month distribution vs. uniform expectation") +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Step 4 — Analysis
+
+```{r exp5-test, eval=exp5_ok, results='asis'}
+test5 <- chisq.test(exp5_counts$observed, p = rep(1/12, 12))
+
+res5 <- data.frame(
+  Quantity = c("Chi-square statistic (χ²)", "Degrees of freedom",
+               "p-value", "Total students"),
+  Value = c(round(test5$statistic, 3),
+            test5$parameter,
+            fmt_p(test5$p.value),
+            sum(exp5_counts$observed))
+)
+print(kable(res5, caption = "Chi-square goodness-of-fit test"))
+```
+
+## SSVA Guiding Questions — Experiment 5
+
+**Q1.** What single categorical variable are we studying? How many categories does it have?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The variable is **birth month** with 12 categories (Jan through Dec).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q2.** What is the expected distribution under the null hypothesis?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Under $H_0$, births are uniformly distributed across the 12 months, so each month's expected count = (total students) / 12.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q3.** Look at the bar chart. Which months, if any, stand out as having more or fewer students than expected?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Compare each bar to the dashed gold line (the expected count). Bars well above the line are months with more births than expected; bars well below have fewer. With a class of ~30 students, even moderate clumpiness is normal by chance — the chi-square test tells us whether the overall departure is more than we'd expect from random variation.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q4.** Why might the uniform distribution actually be a poor model for real birth months?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+In reality, US births show a seasonal pattern: more births in late summer and early fall (August–October), fewer in winter months. This is well-documented in demographic research. A class of 30 may or may not have enough power to detect this real-world departure from uniformity.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q5.** Based on SSVA alone, does the distribution look uniform?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If most bars are close to the dashed line with only small deviations, the data look roughly uniform. If a few months are clearly overrepresented or underrepresented, the data suggest a non-uniform pattern. But remember — with small expected counts per cell (~2-3 students per month for a class of 30), large visual fluctuations are normal even under a truly uniform distribution.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+## Independent Conceptual Questions — Experiment 5
+
+**C1.** What is the statistical question?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+Is the distribution of birth months in our class consistent with a uniform distribution where each month has probability 1/12?
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C2.** What is the population? What is the sample?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+**Population:** all Cal Poly students who could plausibly take this course. **Sample:** the students in this section who submitted their birth month.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C3.** What is the observational unit?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+An individual student.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+---
+:::
+
+**C4.** State the null and alternative hypotheses.
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+$H_0$: $p_{\text{Jan}} = p_{\text{Feb}} = \dots = p_{\text{Dec}} = 1/12$ (births are uniformly distributed).
+
+$H_a$: At least one month's probability differs from 1/12.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C5.** What are the degrees of freedom, and how are they calculated?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+$df = k - 1 = 12 - 1 = 11$.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C6.** What is a potential concern with expected cell counts here? Does it apply?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+The chi-square approximation works best when all expected counts are ≥ 5. With 12 months and ~30 students, the expected count per month is only ~2.5, which violates this guideline. In practice, the test is still informative but should be interpreted with caution. A larger class would help.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C7.** Is this an experiment or an observational study?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+**Observational study.** Students aren't assigned a birth month — it's a pre-existing characteristic. We're just observing and recording it.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C8.** Based on the test statistic and p-value, what do you conclude?
+
+::: {.content-visible when-format="html"}
+<details><summary>Click to reveal answer</summary>
+If p < 0.05, reject $H_0$ — the distribution of birth months in our class is significantly different from uniform. If p ≥ 0.05, fail to reject — the data are consistent with a uniform distribution. Note: failing to reject doesn't prove births *are* uniform — we may just lack power with a small sample.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+\newpage
+
+# Experiment 6 — Test of Independence: Coffee Drink & Where You're From
+
+## Research Question
+
+> **Is the kind of coffee drink students prefer associated with whether they grew up on the coast or inland?**
+
+```{r exp6-load}
+exp6 <- if (params$show_coffee) read_tab("coffee") else NULL
+exp6_ok <- section_check(exp6, "coffee")
+```
+
+```{r exp6-clean, eval=exp6_ok}
+exp6_clean <- exp6 |>
+  mutate(origin = factor(origin, levels = c("Coast", "Inland")),
+         drink = factor(drink, levels = c("Black", "Latte", "Sweet", "None")))
+```
+
+## Step 1 — Look at the Raw Data
+
+::: {.callout-note}
+**Open the class Google Sheet and click the `coffee` tab.** Each row records one student's hometown type (Coast or Inland) and their go-to coffee drink. Browse — do you see any pattern?
+:::
+
+```{r exp6-glimpse, eval=exp6_ok}
+exp6_clean |> select(origin, drink) |> head(8) |>
+  kable(caption = "First few rows", col.names = c("Origin", "Drink"))
+```
+
+## Step 2 — Summary Statistics
+
+```{r exp6-summary, eval=exp6_ok}
+exp6_table <- table(exp6_clean$origin, exp6_clean$drink)
+kable(addmargins(exp6_table), caption = "Contingency table: Origin × Drink")
+```
+
+```{r exp6-expected, eval=exp6_ok, results='asis'}
+cat("\n**Expected counts (under independence):**\n\n")
+exp6_test_obj <- chisq.test(exp6_table)
+kable(round(exp6_test_obj$expected, 1),
+      caption = "Expected counts if origin and drink were independent") |> print()
+```
+
+## Step 3 — Visualization
+
+```{r exp6-plot, eval=exp6_ok}
+exp6_props <- exp6_clean |> count(origin, drink) |>
+  group_by(origin) |> mutate(prop = n / sum(n))
+
+ggplot(exp6_props, aes(x = origin, y = prop, fill = drink)) +
+  geom_col(width = 0.6, alpha = 0.9, position = "dodge") +
+  geom_text(aes(label = paste0(round(prop*100), "%")),
+            position = position_dodge(0.6), vjust = -0.4, size = 3.5, fontface = "bold") +
+  scale_y_continuous(limits = c(0, 1), labels = percent_format()) +
+  scale_fill_manual(values = c("Black"="#1a2420","Latte"="#BD8B13","Sweet"="#c0392b","None"="#1f6b4d")) +
+  labs(x = "Where you grew up", y = "Proportion within group",
+       title = "Coffee drink preference by hometown type", fill = "Drink") +
+  theme_minimal(base_size = 12) + theme(legend.position = "top")
+```
+
+## Step 4 — Analysis
+
+```{r exp6-test, eval=exp6_ok, results='asis'}
+test6 <- chisq.test(exp6_table)
+res6 <- data.frame(
+  Quantity = c("Chi-square statistic (χ²)", "Degrees of freedom", "p-value", "Total students"),
+  Value = c(round(test6$statistic, 3), test6$parameter, fmt_p(test6$p.value), sum(exp6_table))
+)
+print(kable(res6, caption = "Chi-square test of independence"))
+```
+
+## SSVA Guiding Questions — Experiment 6
+
+**Q1.** What two categorical variables are we analyzing, and what are the dimensions of the table?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+**Origin** (2 levels: Coast, Inland) and **Drink** (4 levels: Black, Latte, Sweet, None). The contingency table is **2 × 4**.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+---
+:::
+
+**Q2.** If origin and drink were independent, what would the bar chart look like?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+The proportional breakdown of drinks would be identical for Coast and Inland students. The four colored bars would have the same heights in both groups.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q3.** Which cells depart most from expected counts? What does that tell you?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+Cells where observed ≫ expected are over-represented combinations; observed ≪ expected are under-represented. For example, if Coast × Latte has observed = 9 but expected = 5, that suggests coastal students disproportionately favor lattes.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+## Independent Conceptual Questions — Experiment 6
+
+**C1.** State the hypotheses.
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+$H_0$: Origin and drink preference are **independent**. $H_a$: They are **not independent** (there is an association).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C2.** Degrees of freedom?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+$df = (r-1)(c-1) = (2-1)(4-1) = 3$.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+---
+:::
+
+**C3.** Experiment or observational study? Can we conclude causation?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+**Observational.** Neither variable is assigned. Even if we reject $H_0$, we can only claim association — not that growing up on the coast *causes* people to drink lattes. Possible confounders: family income, urban vs. rural upbringing, exposure to cafe culture.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C4.** Based on the test statistic and p-value, what do you conclude?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+If p < 0.05, reject $H_0$ — there is a statistically significant association between hometown type and coffee drink. If p ≥ 0.05, fail to reject — the data are consistent with independence.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+\newpage
+
+# Experiment 7 — Test of Independence: Pressure Test (Stress & Performance)
+
+## Research Question
+
+> **Does students' self-reported stress level predict how well they actually perform on a fast-paced reaction game?**
+
+```{r exp7-load}
+exp7 <- if (params$show_pressure) read_tab("pressure") else NULL
+exp7_ok <- section_check(exp7, "pressure")
+```
+
+```{r exp7-clean, eval=exp7_ok}
+exp7_clean <- exp7 |>
+  mutate(stress_level = factor(stress_level, levels = c("Low", "Medium", "High")),
+         performance = factor(performance, levels = c("Low", "Medium", "High")))
+```
+
+## How Performance Categories Are Assigned
+
+After the 30-second reaction game, each student's **score** (number of correct taps) and **accuracy** (correct ÷ total attempts) are combined into a single performance category using the following rubric:
+
+| Category | Score threshold | Accuracy threshold | Plain-English meaning |
+|----------|----------------|-------------------|----------------------|
+| **High** | ≥ 16 correct | ≥ 70% | Fast *and* accurate — both conditions must be true |
+| **Medium** | ≥ 8 correct | ≥ 55% | Reasonably fast and reasonably accurate — both conditions must be true |
+| **Low** | Below Medium thresholds | — | Missed at least one of the Medium conditions |
+
+::: {.callout-tip}
+**Why two conditions?** Speed alone can be gamed by tapping randomly; accuracy alone can be faked by tapping slowly. Requiring *both* score and accuracy to clear the bar ensures the category reflects genuine performance under pressure.
+:::
+
+## Step 1 — Look at the Raw Data
+
+::: {.callout-note}
+**Open the class Google Sheet and click the `pressure` tab.** Each row records one student's self-reported stress level *before* the game and their measured performance category *during* the game (plus their raw score, accuracy, and average reaction time).
+:::
+
+```{r exp7-glimpse, eval=exp7_ok}
+exp7_clean |> select(stress_level, performance, score, accuracy, avg_rt_ms) |> head(8) |>
+  kable(caption = "First few rows",
+        col.names = c("Stress (self-reported)", "Performance (measured)", "Score", "Accuracy %", "Avg RT (ms)"))
+```
+
+## Step 2 — Summary Statistics
+
+```{r exp7-summary, eval=exp7_ok}
+exp7_table <- table(exp7_clean$stress_level, exp7_clean$performance)
+kable(addmargins(exp7_table), caption = "Contingency table: Stress × Performance")
+```
+
+```{r exp7-expected, eval=exp7_ok, results='asis'}
+cat("\n**Expected counts (under independence):**\n\n")
+exp7_test_obj <- chisq.test(exp7_table)
+kable(round(exp7_test_obj$expected, 1),
+      caption = "Expected counts if stress and performance were independent") |> print()
+```
+
+## Step 3 — Visualization
+
+```{r exp7-plot, eval=exp7_ok}
+exp7_props <- exp7_clean |> count(stress_level, performance) |>
+  group_by(stress_level) |> mutate(prop = n / sum(n))
+
+ggplot(exp7_props, aes(x = stress_level, y = prop, fill = performance)) +
+  geom_col(width = 0.6, alpha = 0.9, position = "dodge") +
+  geom_text(aes(label = paste0(round(prop*100), "%")),
+            position = position_dodge(0.6), vjust = -0.4, size = 3.5, fontface = "bold") +
+  scale_y_continuous(limits = c(0, 1), labels = percent_format()) +
+  scale_fill_manual(values = c("Low"="#a82c1f","Medium"="#BD8B13","High"="#1f6b4d")) +
+  labs(x = "Self-reported stress level", y = "Proportion within stress group",
+       title = "Game performance by self-reported stress", fill = "Performance") +
+  theme_minimal(base_size = 12) + theme(legend.position = "top")
+```
+
+## Step 4 — Analysis
+
+```{r exp7-test, eval=exp7_ok, results='asis'}
+test7 <- chisq.test(exp7_table)
+res7 <- data.frame(
+  Quantity = c("Chi-square statistic (χ²)", "Degrees of freedom", "p-value", "Total students"),
+  Value = c(round(test7$statistic, 3), test7$parameter, fmt_p(test7$p.value), sum(exp7_table))
+)
+print(kable(res7, caption = "Chi-square test of independence"))
+```
+
+## SSVA Guiding Questions — Experiment 7
+
+**Q1.** What's special about how the two variables in this experiment were measured?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+Stress is **self-reported** (subjective) and performance is **objectively measured** by the game (score, accuracy, reaction time combined into a category). One variable is what students *think* about themselves; the other is what they actually *did*. This contrast is what makes the test interesting.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q2.** Dimensions of the contingency table and degrees of freedom?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+3 × 3 table (Low/Med/High stress × Low/Med/High performance), so $df = (3-1)(3-1) = 4$.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q3.** If stress and performance were independent, what would the visualization show?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+The proportional breakdown of performance categories would be identical across the three stress groups. The bars would look the same regardless of stress level.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**Q4.** What story would you expect intuitively? Does the data agree?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+The intuitive prediction is that high-stress students would underperform (more in the Low performance category) and low-stress students would perform better. But the actual data may surprise you — some research suggests *moderate* stress actually helps performance, and people often misjudge how stressed they are. Compare your prediction to what the bars actually show.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+*Your answer:*
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+## Independent Conceptual Questions — Experiment 7
+
+**C1.** State the hypotheses.
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+$H_0$: Self-reported stress and game performance are **independent**. $H_a$: They are **not independent** (associated).
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C2.** Is this an experiment or an observational study? Justify carefully — there's a subtlety.
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+This is **observational** for the relationship being tested. Stress is not randomly assigned — students arrive in class with whatever stress level they have. The game is a *measurement instrument*, not a treatment. So even though we're collecting performance data through an active task, we're observing the natural relationship between pre-existing stress and performance, not manipulating either one.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C3.** What confounders could explain any association we find?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+Sleep, caffeine, video game experience, hand-eye coordination, time of day, mood, recent meals. Notably, students who play a lot of fast-paced games may perform well *and* report low stress, but the gaming experience (not the stress) drives performance.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::
+
+**C4.** Based on the test, what do you conclude?
+
+::: {.content-visible when-format="html"}
+<details><summary>Answer</summary>
+If p < 0.05, reject $H_0$ — there's a statistically significant association between self-reported stress and measured game performance. If p ≥ 0.05, fail to reject — stress (as self-reported) is not predictive of performance in this sample. Either result is interesting to discuss in context.
+</details>
+:::
+
+::: {.content-visible when-format="docx"}
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+---
+:::

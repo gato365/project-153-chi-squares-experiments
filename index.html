@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STAT 252 — Chi-Square Experiments</title>
+<style>
+  :root { --cp-green:#154734; --cp-green-dark:#0d2e21; --cp-green-light:#1f6b4d;
+    --cp-gold:#BD8B13; --cp-gold-light:#e0a830; --cp-gold-soft:#fdf6e3;
+    --bg:#f4f5f3; --card:#fff; --ink:#1a2420; --muted:#6b7570; --border:#d8dcd6;
+    --good:#1f6b4d; --bad:#a82c1f; --shadow:0 4px 20px rgba(21,71,52,.08); }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  .banner{background:linear-gradient(135deg,var(--cp-green) 0%,var(--cp-green-light) 100%);color:#fff;padding:24px 20px 28px;border-bottom:5px solid var(--cp-gold)}
+  .banner-inner{max-width:640px;margin:0 auto}
+  .wordmark{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cp-gold-light);margin-bottom:6px}
+  .banner h1{font-size:24px;font-weight:800}
+  .banner .subtitle{color:rgba(255,255,255,.85);font-size:14px;margin-top:4px}
+  .wrap{max-width:640px;margin:0 auto;padding:24px 16px 80px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:var(--shadow);border-top:4px solid var(--cp-gold)}
+  .card h2{font-size:19px;margin-bottom:14px;color:var(--cp-green);font-weight:700}
+  .card h3{font-size:15px;margin:16px 0 8px;color:var(--cp-green-light);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  label{display:block;font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--cp-green);text-transform:uppercase;letter-spacing:.4px}
+  input,select{width:100%;padding:13px 14px;font-size:16px;border:2px solid var(--border);border-radius:10px;background:#fff;font-family:inherit}
+  input:focus,select:focus{outline:none;border-color:var(--cp-green);box-shadow:0 0 0 3px rgba(21,71,52,.12)}
+  button{background:var(--cp-green);color:#fff;border:none;padding:15px 22px;font-size:16px;font-weight:700;border-radius:10px;cursor:pointer;width:100%;margin-top:18px;font-family:inherit;box-shadow:0 2px 8px rgba(21,71,52,.2);transition:all .12s}
+  button:hover{background:var(--cp-green-dark)}
+  button:disabled{background:#aaa;cursor:not-allowed;box-shadow:none}
+  button.gold{background:var(--cp-gold);box-shadow:0 2px 8px rgba(189,139,19,.3)}
+  button.gold:hover{background:#a07310}
+  button.secondary{background:#fff;color:var(--cp-green);border:2px solid var(--cp-green);box-shadow:none}
+  .hidden{display:none!important}
+  .info-box{background:var(--cp-gold-soft);border-left:5px solid var(--cp-gold);padding:14px 16px;border-radius:8px;margin:14px 0;font-size:14px}
+  .info-box strong{color:var(--cp-green)}
+  .status{padding:14px;border-radius:10px;margin-top:14px;font-size:14px;text-align:center;font-weight:600}
+  .status.success{background:#e8f1ed;color:var(--cp-green);border:2px solid var(--cp-green-light)}
+  .small{font-size:13px;color:var(--muted);margin-top:10px;text-align:center}
+  .step{display:flex;align-items:flex-start;margin-bottom:12px;font-size:15px}
+  .step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--cp-green);color:#fff;font-size:13px;font-weight:800;margin-right:8px;flex-shrink:0}
+  /* Roulette */
+  .wheel-area{text-align:center;margin:20px 0}
+  .wheel-wrap{position:relative;width:240px;height:240px;margin:0 auto}
+  .wheel{width:240px;height:240px;border-radius:50%;border:6px solid var(--cp-gold);box-shadow:0 8px 30px rgba(0,0,0,.3),inset 0 0 20px rgba(0,0,0,.4);transition:transform 4s cubic-bezier(.17,.67,.21,.99)}
+  .wheel.fast{transition:transform .55s cubic-bezier(.2,.7,.3,1)}
+  .pointer{position:absolute;top:-12px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:22px solid var(--cp-gold);filter:drop-shadow(0 2px 4px rgba(0,0,0,.4));z-index:2}
+  .result-num{font-size:54px;font-weight:800;color:var(--cp-green);margin-top:14px;font-family:"SF Mono",Menlo,monospace;min-height:64px}
+  .spin-counter{font-size:14px;color:var(--muted);font-weight:600;margin-top:6px}
+  .tally-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:14px 0}
+  .tally-cell{text-align:center;padding:10px 4px;border-radius:8px;background:#f0f2ee}
+  .tally-cell .face{font-size:14px;font-weight:800;color:var(--cp-green)}
+  .tally-cell .count{font-size:18px;font-weight:800}
+  .red{background:#c0392b!important;color:#fff!important}
+  .black{background:#1a2420!important;color:#fff!important}
+  /* Month + choice grids */
+  .month-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+  .month-btn,.choice-btn{background:#fff;color:var(--ink);border:2px solid var(--border);padding:14px 8px;font-size:14px;font-weight:600;border-radius:10px;cursor:pointer;width:100%;margin-top:0;box-shadow:none;transition:all .12s}
+  .month-btn:hover,.choice-btn:hover{border-color:var(--cp-green);background:#e8f1ed}
+  .month-btn.selected,.choice-btn.selected{background:var(--cp-green);color:#fff;border-color:var(--cp-green)}
+  .choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:10px 0}
+  /* Pressure test game */
+  .game-area{background:#1a2420;border:3px solid var(--cp-gold);border-radius:14px;padding:24px;text-align:center;min-height:280px;position:relative}
+  .game-target{font-size:20px;color:var(--cp-gold-light);font-weight:700;margin-bottom:14px;text-transform:uppercase;letter-spacing:1px}
+  .game-shapes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto}
+  .shape{width:80px;height:80px;border-radius:14px;cursor:pointer;display:inline-block;transition:transform .08s}
+  .shape:active{transform:scale(.92)}
+  .shape.circle{border-radius:50%}
+  .shape.triangle{clip-path:polygon(50% 0%,0% 100%,100% 100%);border-radius:0}
+  .shape.square{border-radius:10px}
+  .game-stats{display:flex;justify-content:space-around;margin-top:16px;color:#fff;font-weight:700}
+  .game-stats div span{display:block;font-size:11px;color:var(--cp-gold-light);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+  .game-stats div strong{font-size:22px}
+  .countdown{font-size:60px;color:var(--cp-gold);font-weight:800}
+</style>
+</head>
+<body>
+<div class="banner"><div class="banner-inner">
+  <div class="wordmark">Cal Poly · Statistics</div>
+  <h1>STAT 252 — Chi-Square Experiments</h1>
+  <div class="subtitle">Goodness of Fit & Test of Independence</div>
+</div></div>
+
+<div class="wrap">
+
+<div class="card" style="border-top-color:var(--cp-green)">
+  <h2>Welcome — Before You Begin</h2>
+  <div class="info-box" style="font-size:15px;line-height:1.6">
+    <strong>Today you will complete four experiments.</strong><br><br>
+    <div class="step"><span class="step-num">1</span><p><strong>Complete all four experiments</strong> — Experiment 4, 5, 6, and 7.</p></div>
+    <div class="step"><span class="step-num">2</span><p><strong>Do each experiment only once.</strong> Duplicate submissions will skew the class data.</p></div>
+    <div class="step"><span class="step-num">3</span><p>Use the dropdown below to select your section, choose an experiment, and tap <strong>Start</strong>. Then return to this page and repeat for the remaining three.</p></div>
+  </div>
+</div>
+
+<div class="card" id="sessionCard">
+  <h2>Step 1 — Session Info</h2>
+  <label for="sessionCode">Class session code</label>
+  <select id="sessionCode">
+    <option value="">— Select your section —</option>
+    <option value="section-8">Section 8</option>
+    <option value="section-9">Section 9</option>
+  </select>
+  <label for="experimentSelect">Which experiment are you doing?</label>
+  <select id="experimentSelect">
+    <option value="">— Select —</option>
+    <optgroup label="Goodness of Fit">
+      <option value="roulette">Experiment 4: Is the Roulette Wheel Rigged?</option>
+      <option value="birthmonth">Experiment 5: Birth Month Distribution</option>
+    </optgroup>
+    <optgroup label="Test of Independence">
+      <option value="coffee">Experiment 6: Coast vs. Inland & Coffee Drink</option>
+      <option value="pressure">Experiment 7: Pressure Test (Stress vs. Performance)</option>
+    </optgroup>
+  </select>
+  <button id="startBtn">Start →</button>
+</div>
+
+<!-- ============ EXP 4: ROULETTE ============ -->
+
+<div class="card hidden" id="exp4Card">
+  <h2>🎰 Experiment 4 — Is the Roulette Wheel Rigged?</h2>
+  <div id="exp4Intro">
+    <div class="info-box">
+      <strong>You're a gambler at a casino.</strong> A 6-pocket roulette wheel sits in front of you (numbered 1–6, alternating red and black). You suspect the casino may have rigged some of the wheels — but you don't know if yours is one of them. You'll spin <strong>15 times</strong>, and the class will pool all spins to test whether the wheel is fair.
+    </div>
+    <h3>Instructions</h3>
+    <div class="step"><span class="step-num">1</span><p>Tap <strong>Spin</strong> to send the wheel spinning.</p></div>
+    <div class="step"><span class="step-num">2</span><p>The first 3 spins show the full dramatic 10-second animation. After that, spins are quick (about half a second) so we can finish in time.</p></div>
+    <div class="step"><span class="step-num">3</span><p>The pocket the pointer lands on is your result. The tally below tracks all 6 pockets.</p></div>
+    <div class="step"><span class="step-num">4</span><p>After 15 spins, tap <strong>Submit</strong>. Your wheel type (fair or rigged) will be revealed during class analysis.</p></div>
+    <button id="exp4StartBtn">🎰 Begin Spinning →</button>
+  </div>
+
+  <div id="exp4Spinning" class="hidden">
+    <div class="spin-counter" id="exp4Counter">Spin 0 of 15</div>
+    <div class="wheel-area">
+      <div class="wheel-wrap">
+        <div class="pointer"></div>
+        <svg class="wheel" id="wheelSvg" viewBox="0 0 200 200">
+          <g id="wheelG">
+            <!-- 6 pockets at 60deg each, alternating red/black -->
+            <path d="M100,100 L100,0 A100,100 0 0,1 186.6,50 Z" fill="#c0392b"/>
+            <path d="M100,100 L186.6,50 A100,100 0 0,1 186.6,150 Z" fill="#1a2420"/>
+            <path d="M100,100 L186.6,150 A100,100 0 0,1 100,200 Z" fill="#c0392b"/>
+            <path d="M100,100 L100,200 A100,100 0 0,1 13.4,150 Z" fill="#1a2420"/>
+            <path d="M100,100 L13.4,150 A100,100 0 0,1 13.4,50 Z" fill="#c0392b"/>
+            <path d="M100,100 L13.4,50 A100,100 0 0,1 100,0 Z" fill="#1a2420"/>
+            <text x="143" y="30" fill="#fff" font-size="18" font-weight="bold" text-anchor="middle">1</text>
+            <text x="173" y="105" fill="#fff" font-size="18" font-weight="bold" text-anchor="middle">2</text>
+            <text x="143" y="180" fill="#fff" font-size="18" font-weight="bold" text-anchor="middle">3</text>
+            <text x="57" y="180" fill="#fff" font-size="18" font-weight="bold" text-anchor="middle">4</text>
+            <text x="27" y="105" fill="#fff" font-size="18" font-weight="bold" text-anchor="middle">5</text>
+            <text x="57" y="30" fill="#fff" font-size="18" font-weight="bold" text-anchor="middle">6</text>
+            <circle cx="100" cy="100" r="14" fill="#BD8B13"/>
+          </g>
+        </svg>
+      </div>
+      <div class="result-num" id="resultNum">—</div>
+    </div>
+    <div class="tally-grid">
+      <div class="tally-cell red"><div class="face">1</div><div class="count" id="t1">0</div></div>
+      <div class="tally-cell black"><div class="face">2</div><div class="count" id="t2">0</div></div>
+      <div class="tally-cell red"><div class="face">3</div><div class="count" id="t3">0</div></div>
+      <div class="tally-cell black"><div class="face">4</div><div class="count" id="t4">0</div></div>
+      <div class="tally-cell red"><div class="face">5</div><div class="count" id="t5">0</div></div>
+      <div class="tally-cell black"><div class="face">6</div><div class="count" id="t6">0</div></div>
+    </div>
+    <button id="spinBtn">🎰 Spin →</button>
+  </div>
+
+  <div id="exp4Done" class="hidden">
+    <h3>Your final tally</h3>
+    <div class="tally-grid" id="exp4FinalTally"></div>
+    <button id="exp4SubmitBtn" class="gold">Submit My Data ✓</button>
+  </div>
+  <div id="exp4Status"></div>
+</div>
+
+<!-- ============ EXP 5: BIRTH MONTH ============ -->
+
+<div class="card hidden" id="exp5Card">
+  <h2>Experiment 5 — Birth Month Distribution</h2>
+  <div class="info-box">If births were spread equally, each month would contain ~8.3% of births. Tap your birth month and we'll test whether our class matches the uniform expectation.</div>
+  <label>Tap your birth month:</label>
+  <div class="month-grid" id="monthGrid"></div>
+  <button id="exp5SubmitBtn" class="gold" disabled>Select a month first</button>
+  <div id="exp5Status"></div>
+</div>
+
+<!-- ============ EXP 6: COAST + COFFEE ============ -->
+
+<div class="card hidden" id="exp6Card">
+  <h2>☕ Experiment 6 — Where You're From & What You Drink</h2>
+  <div class="info-box">
+    <strong>The question:</strong> Is the kind of coffee drink you prefer associated with whether you grew up on the coast or inland? Some say coastal folks lean toward fancy lattes and cafe culture, while inland folks prefer simpler black coffee. Let's test it with a chi-square test of independence on a 2×4 table.
+  </div>
+  <h3>Instructions</h3>
+  <div class="step"><span class="step-num">1</span><p>Pick where you grew up: <strong>coast</strong> (within ~50 miles of an ocean) or <strong>inland</strong>.</p></div>
+  <div class="step"><span class="step-num">2</span><p>Pick your usual coffee drink. If you don't drink coffee, pick "none / tea."</p></div>
+  <div class="step"><span class="step-num">3</span><p>Tap submit.</p></div>
+
+<label>Where did you grow up?</label>
+
+  <div class="choice-grid" id="exp6OriginGrid">
+    <button class="choice-btn" data-val="Coast" onclick="exp6Sel('origin',this)">🌊 Coast</button>
+    <button class="choice-btn" data-val="Inland" onclick="exp6Sel('origin',this)">🏔️ Inland</button>
+  </div>
+  <label>Your usual coffee drink:</label>
+  <div class="choice-grid" id="exp6DrinkGrid">
+    <button class="choice-btn" data-val="Black" onclick="exp6Sel('drink',this)">☕ Black coffee</button>
+    <button class="choice-btn" data-val="Latte" onclick="exp6Sel('drink',this)">🥛 Latte/Cap</button>
+    <button class="choice-btn" data-val="Sweet" onclick="exp6Sel('drink',this)">🍫 Sweet/Blended</button>
+    <button class="choice-btn" data-val="None" onclick="exp6Sel('drink',this)">🍵 None / Tea</button>
+  </div>
+  <button id="exp6SubmitBtn" class="gold" disabled>Select both first</button>
+  <div id="exp6Status"></div>
+</div>
+
+<!-- ============ EXP 7: PRESSURE TEST ============ -->
+
+<div class="card hidden" id="exp7Card">
+  <h2>⚡ Experiment 7 — Pressure Test</h2>
+  <div id="exp7Intro">
+    <div class="info-box">
+      <strong>The question:</strong> Does how stressed you feel right now actually predict how well you perform under pressure? You'll first report your stress level, then play a 30-second reaction game. We'll classify your performance and test whether stress and performance are independent.
+    </div>
+    <div class="info-box" style="margin-top:8px">
+      <strong>Variables:</strong><br>
+      <span style="color:var(--muted)">Explanatory variable:</span> <strong>Stress Level</strong> (Low / Medium / High)<br>
+      <span style="color:var(--muted)">Response variable:</span> <strong>Performance Category</strong> (Low / Medium / High)
+    </div>
+    <h3>The game</h3>
+    <div class="step"><span class="step-num">1</span><p>A target shape (color + form) appears at the top of the game area.</p></div>
+    <div class="step"><span class="step-num">2</span><p>Three shapes appear below. Tap the one that matches the target as fast as you can.</p></div>
+    <div class="step"><span class="step-num">3</span><p>A new round starts immediately. Keep going for 30 seconds. Your <strong>score</strong> = correct taps; your performance category is based on score and reaction speed.</p></div>
+    <label>First — your CURRENT stress level:</label>
+    <div class="choice-grid" id="exp7StressGrid">
+      <button class="choice-btn" data-val="Low" onclick="exp7Sel(this)">😌 Low</button>
+      <button class="choice-btn" data-val="Medium" onclick="exp7Sel(this)">😐 Medium</button>
+      <button class="choice-btn" data-val="High" onclick="exp7Sel(this)">😰 High</button>
+    </div>
+    <button id="exp7StartBtn" disabled>Start the game →</button>
+  </div>
+
+  <div id="exp7Countdown" class="hidden game-area">
+    <div class="countdown" id="cdNum">3</div>
+    <p style="color:#fff;margin-top:10px">Get ready…</p>
+  </div>
+
+  <div id="exp7Game" class="hidden game-area">
+    <div class="game-target" id="gameTarget">TAP: RED CIRCLE</div>
+    <div class="game-shapes" id="gameShapes"></div>
+    <div class="game-stats">
+      <div><span>Time</span><strong id="gameTime">30</strong></div>
+      <div><span>Correct</span><strong id="gameScore">0</strong></div>
+      <div><span>Wrong</span><strong id="gameMiss">0</strong></div>
+    </div>
+  </div>
+
+  <div id="exp7Done" class="hidden">
+    <h3>Your results</h3>
+    <p style="font-size:17px">Score: <strong id="finalScore"></strong> correct</p>
+    <p style="font-size:17px">Accuracy: <strong id="finalAcc"></strong>%</p>
+    <p style="font-size:17px">Avg reaction: <strong id="finalRT"></strong> ms</p>
+    <p style="font-size:17px;color:var(--cp-green)">Performance category: <strong id="finalCat"></strong></p>
+    <div id="catExplain" class="info-box" style="margin-top:14px;font-size:14px;line-height:1.7"></div>
+    <button id="exp7SubmitBtn" class="gold">Submit My Data ✓</button>
+  </div>
+  <div id="exp7Status"></div>
+</div>
+
+<div id="thanks" class="card hidden">
+  <h2>Thanks! ✓</h2>
+  <p>Your data has been recorded.</p>
+  <button class="secondary" onclick="location.reload()">Start Over</button>
+</div>
+
+</div>
+
+<script>
+const ENDPOINT = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+function $(id){return document.getElementById(id)}
+function show(id){$(id).classList.remove("hidden")}
+function hide(id){$(id).classList.add("hidden")}
+function clearSel(c){c.querySelectorAll(".choice-btn,.month-btn").forEach(b=>b.classList.remove("selected"))}
+
+async function postData(p){
+  p.timestamp = new Date().toISOString();
+  p.session = $("sessionCode").value.trim() || "no-session";
+  try { await fetch(ENDPOINT,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(p)}); return true }
+  catch(e){ console.error(e); return false }
+}
+function showStatus(id,msg){ $(id).innerHTML=`<div class="status success">${msg}</div>` }
+
+$("startBtn").addEventListener("click",()=>{
+  const code=$("sessionCode").value.trim(), exp=$("experimentSelect").value;
+  if(!code){alert("Enter session code.");return}
+  if(!exp){alert("Pick an experiment.");return}
+  hide("sessionCard");
+  if(exp==="roulette") show("exp4Card");
+  if(exp==="birthmonth") show("exp5Card");
+  if(exp==="coffee") show("exp6Card");
+  if(exp==="pressure") show("exp7Card");
+});
+
+// ===== EXPERIMENT 4: ROULETTE =====
+let exp4 = { isRigged: Math.random()<0.5, spins:0, tally:{1:0,2:0,3:0,4:0,5:0,6:0}, allSpins:[], rotation:0 };
+
+function spinWheel(rigged){
+  // Pockets at angles: pocket k centered at (k-1)*60 + 30 deg from top
+  // Rigged: pocket 6 has ~33% chance
+  let pocket;
+  if(rigged && Math.random()<0.333) pocket = 6;
+  else if(rigged) pocket = Math.floor(Math.random()*5)+1;
+  else pocket = Math.floor(Math.random()*6)+1;
+  return pocket;
+}
+
+$("exp4StartBtn").addEventListener("click",()=>{
+  hide("exp4Intro"); show("exp4Spinning");
+});
+
+$("spinBtn").addEventListener("click",()=>{
+  if(exp4.spins>=15) return;
+  $("spinBtn").disabled = true;
+  const pocket = spinWheel(exp4.isRigged);
+  const dramatic = exp4.spins < 3;
+  const wheel = $("wheelSvg");
+  // pocket k is centered at angle (k-1)*60+30 from top (clockwise on the SVG)
+  // We rotate the wheel so that pocket lands under the pointer (top, angle 0)
+  // To land pocket k at top, rotate by -((k-1)*60+30) plus N full turns
+  const finalAngle = -((pocket-1)*60+30);
+  const turns = dramatic ? 6 : 1;
+  const newRotation = exp4.rotation + turns*360 + (finalAngle - (exp4.rotation%360));
+  exp4.rotation = newRotation;
+  wheel.classList.remove("fast");
+  if(!dramatic) wheel.classList.add("fast");
+  wheel.style.transform = `rotate(${exp4.rotation}deg)`;
+  $("resultNum").textContent = "…";
+
+  setTimeout(()=>{
+    exp4.spins++;
+    exp4.tally[pocket]++;
+    exp4.allSpins.push(pocket);
+    $("resultNum").textContent = pocket;
+    for(let i=1;i<=6;i++) $("t"+i).textContent = exp4.tally[i];
+    $("exp4Counter").textContent = `Spin ${exp4.spins} of 15`;
+    if(exp4.spins>=15){
+      $("spinBtn").textContent="All 15 spins complete!";
+      setTimeout(()=>{
+        hide("exp4Spinning"); show("exp4Done");
+        let html=""; for(let i=1;i<=6;i++){
+          const cls = i%2===1?"red":"black";
+          html += `<div class="tally-cell ${cls}"><div class="face">${i}</div><div class="count">${exp4.tally[i]}</div></div>`;
+        }
+        $("exp4FinalTally").innerHTML = html;
+      },600);
+    } else {
+      $("spinBtn").disabled = false;
+    }
+  }, dramatic ? 4000 : 600);
+});
+
+$("exp4SubmitBtn").addEventListener("click",async()=>{
+  $("exp4SubmitBtn").disabled=true;
+  const ok = await postData({experiment:"roulette",wheel_type:exp4.isRigged?"rigged":"fair",
+    pocket_1:exp4.tally[1],pocket_2:exp4.tally[2],pocket_3:exp4.tally[3],
+    pocket_4:exp4.tally[4],pocket_5:exp4.tally[5],pocket_6:exp4.tally[6],
+    total_spins:15,all_spins:exp4.allSpins.join(",")});
+  showStatus("exp4Status","Submitted! ✓");
+  setTimeout(()=>{hide("exp4Card");show("thanks")},1200);
+});
+
+// ===== EXPERIMENT 5: BIRTH MONTH =====
+let exp5={month:""};
+(function(){
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const grid=$("monthGrid");
+  months.forEach(m=>{
+    const b=document.createElement("button");
+    b.className="month-btn"; b.textContent=m;
+    b.addEventListener("click",()=>{clearSel(grid);b.classList.add("selected");exp5.month=m;
+      $("exp5SubmitBtn").disabled=false;$("exp5SubmitBtn").textContent=`Submit: ${m}`});
+    grid.appendChild(b);
+  });
+})();
+$("exp5SubmitBtn").addEventListener("click",async()=>{
+  if(!exp5.month) return;
+  $("exp5SubmitBtn").disabled=true;
+  await postData({experiment:"birthmonth",birth_month:exp5.month});
+  showStatus("exp5Status","Submitted! ✓");
+  setTimeout(()=>{hide("exp5Card");show("thanks")},1200);
+});
+
+// ===== EXPERIMENT 6: COAST + COFFEE =====
+let exp6={origin:"",drink:""};
+function exp6Sel(field,btn){
+  clearSel(btn.parentElement); btn.classList.add("selected");
+  exp6[field]=btn.dataset.val;
+  if(exp6.origin && exp6.drink){
+    $("exp6SubmitBtn").disabled=false;
+    $("exp6SubmitBtn").textContent=`Submit: ${exp6.origin} + ${exp6.drink}`;
+  }
+}
+$("exp6SubmitBtn").addEventListener("click",async()=>{
+  if(!exp6.origin||!exp6.drink) return;
+  $("exp6SubmitBtn").disabled=true;
+  await postData({experiment:"coffee",origin:exp6.origin,drink:exp6.drink});
+  showStatus("exp6Status","Submitted! ✓");
+  setTimeout(()=>{hide("exp6Card");show("thanks")},1200);
+});
+
+// ===== EXPERIMENT 7: PRESSURE TEST =====
+let exp7 = { stress:"", score:0, miss:0, rts:[], targetStart:0, currentTarget:null, gameTimer:null, timeLeft:30 };
+const COLORS = [{name:"RED",val:"#c0392b"},{name:"GREEN",val:"#1f6b4d"},{name:"GOLD",val:"#BD8B13"}];
+const SHAPES = ["circle","triangle","square"];
+
+function exp7Sel(btn){
+  clearSel(btn.parentElement); btn.classList.add("selected");
+  exp7.stress = btn.dataset.val;
+  $("exp7StartBtn").disabled = false;
+}
+
+$("exp7StartBtn").addEventListener("click",()=>{
+  hide("exp7Intro"); show("exp7Countdown");
+  let cd=3; $("cdNum").textContent=cd;
+  const ci = setInterval(()=>{
+    cd--;
+    if(cd<=0){ clearInterval(ci); hide("exp7Countdown"); show("exp7Game"); startGame(); }
+    else $("cdNum").textContent=cd;
+  },800);
+});
+
+function newRound(){
+  // Pick target
+  const tColor = COLORS[Math.floor(Math.random()*3)];
+  const tShape = SHAPES[Math.floor(Math.random()*3)];
+  exp7.currentTarget = {color:tColor.name, shape:tShape};
+  $("gameTarget").textContent = `TAP: ${tColor.name} ${tShape.toUpperCase()}`;
+
+  // Generate 3 shapes — guarantee 1 is the target
+  const shapes = $("gameShapes");
+  shapes.innerHTML = "";
+  const correctIdx = Math.floor(Math.random()*3);
+  for(let i=0;i<3;i++){
+    let c, s;
+    if(i===correctIdx){ c=tColor; s=tShape; }
+    else {
+      do { c=COLORS[Math.floor(Math.random()*3)]; s=SHAPES[Math.floor(Math.random()*3)]; }
+      while(c.name===tColor.name && s===tShape);
+    }
+    const div = document.createElement("div");
+    div.className = "shape " + s;
+    div.style.background = c.val;
+    div.dataset.color = c.name;
+    div.dataset.shape = s;
+    div.addEventListener("click",handleTap);
+    shapes.appendChild(div);
+  }
+  exp7.targetStart = performance.now();
+}
+
+function handleTap(e){
+  const el = e.currentTarget;
+  const correct = el.dataset.color===exp7.currentTarget.color && el.dataset.shape===exp7.currentTarget.shape;
+  if(correct){
+    const rt = performance.now() - exp7.targetStart;
+    exp7.rts.push(rt);
+    exp7.score++;
+    $("gameScore").textContent = exp7.score;
+  } else {
+    exp7.miss++;
+    $("gameMiss").textContent = exp7.miss;
+  }
+  newRound();
+}
+
+function startGame(){
+  exp7.score=0; exp7.miss=0; exp7.rts=[]; exp7.timeLeft=30;
+  $("gameTime").textContent=30;
+  newRound();
+  exp7.gameTimer = setInterval(()=>{
+    exp7.timeLeft--;
+    $("gameTime").textContent = exp7.timeLeft;
+    if(exp7.timeLeft<=0){ clearInterval(exp7.gameTimer); endGame(); }
+  },1000);
+}
+
+function endGame(){
+  hide("exp7Game"); show("exp7Done");
+  const total = exp7.score + exp7.miss;
+  const acc = total>0 ? Math.round(100*exp7.score/total) : 0;
+  const avgRT = exp7.rts.length ? Math.round(exp7.rts.reduce((a,b)=>a+b,0)/exp7.rts.length) : 0;
+  // Performance category: combine score and avg RT
+  let cat;
+  if(exp7.score >= 16 && acc >= 70) cat = "High";
+  else if(exp7.score >= 8 && acc >= 55) cat = "Medium";
+  else cat = "Low";
+  exp7.acc = acc; exp7.avgRT = avgRT; exp7.cat = cat;
+  $("finalScore").textContent = exp7.score;
+  $("finalAcc").textContent = acc;
+  $("finalRT").textContent = avgRT;
+  $("finalCat").textContent = cat;
+
+  // Plain-English explanation of how the category was determined
+  let explain;
+  if(cat === "High"){
+    explain = `<strong>Why High?</strong> You scored ${exp7.score} correct (needed ≥ 16) and hit ${acc}% accuracy (needed ≥ 70%). You met both thresholds — that puts you in the <strong>High</strong> performance category.`;
+  } else if(cat === "Medium"){
+    explain = `<strong>Why Medium?</strong> You scored ${exp7.score} correct (needed ≥ 8) and hit ${acc}% accuracy (needed ≥ 55%). You met the Medium thresholds but not the High ones (≥ 16 correct <em>and</em> ≥ 70% accuracy), so you land in <strong>Medium</strong>.`;
+  } else {
+    const missedScore = exp7.score < 8;
+    const missedAcc   = acc < 55;
+    let reason = "";
+    if(missedScore && missedAcc) reason = `your score (${exp7.score}) was below 8 and your accuracy (${acc}%) was below 55%`;
+    else if(missedScore)          reason = `your score (${exp7.score}) was below the minimum of 8 correct`;
+    else                          reason = `your accuracy (${acc}%) was below the minimum of 55%`;
+    explain = `<strong>Why Low?</strong> To reach Medium you need ≥ 8 correct <em>and</em> ≥ 55% accuracy. Here, ${reason}. That places you in the <strong>Low</strong> performance category.`;
+  }
+  $("catExplain").innerHTML = explain;
+}
+
+$("exp7SubmitBtn").addEventListener("click",async()=>{
+  $("exp7SubmitBtn").disabled=true;
+  await postData({experiment:"pressure",stress_level:exp7.stress,performance:exp7.cat,
+    score:exp7.score,accuracy:exp7.acc,avg_rt_ms:exp7.avgRT});
+  showStatus("exp7Status","Submitted! ✓");
+  setTimeout(()=>{hide("exp7Card");show("thanks")},1200);
+});
+</script>
+
+</body>
+</html>
