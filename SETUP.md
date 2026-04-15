@@ -21,16 +21,19 @@ A one-time, ~15-minute setup. After this, every class is just: share the URL →
 8. Copy the **Web app URL** it gives you. It looks like:
    `https://script.google.com/macros/s/AKfycbx...long.../exec`
 
-[Real Web App](https://script.google.com/macros/s/AKfycbxAUJsWI_yrLN9tfij5mN6gliwt2uWTXYC6cxqewDV4tYF-7QibShAF-bu-tPZ7KsM3/exec)
+[Real Web App](https://script.google.com/macros/s/AKfycbxQ2gx6E85fNX3TEZftccXQlFtdNOCo90Azk7abOaDw46ZOXsmQB1BlREMEFyxrA7CLjA/exec)
 
 
-[Just in case, deployment id](AKfycbxAUJsWI_yrLN9tfij5mN6gliwt2uWTXYC6cxqewDV4tYF-7QibShAF-bu-tPZ7KsM3)
+[Just in case, deployment id](AKfycbxQ2gx6E85fNX3TEZftccXQlFtdNOCo90Azk7abOaDw46ZOXsmQB1BlREMEFyxrA7CLjA)
 
 
 9. Also grab the **Sheet ID** from your Sheet's URL — the long string between `/d/` and `/edit`:
    `https://docs.google.com/spreadsheets/d/`**`THIS_PART_IS_THE_ID`**`/edit`
 
-[Real Sheet ID](12isb_SuqqKsMgHAhzOJIzwagqZaXadsU4oFZZUhHuv0)
+[Real Sheet ID](1tONhwxUnaoHO8SlTVTO3u4kcxbteZXqIOcxteUuKeck)
+
+
+
 
 
 Keep both of these handy.
